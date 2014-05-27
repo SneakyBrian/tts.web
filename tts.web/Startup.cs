@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Web;
 using Owin;
 using tts.web.Handlers;
@@ -14,7 +15,7 @@ namespace tts.web
         {
             CheckAddBinPath();
 
-            var reqHandler = new TTSRequestHandler();
+            var reqHandler = new TTSRequestHandler() { Cache = new FileCache() };
 
             app.Run(reqHandler.HandleRequest);
         }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Speech.Synthesis;
 using System.Threading.Tasks;
 using System.Web;
@@ -13,6 +14,8 @@ namespace tts.web.Handlers
 {
     public class TTSRequestHandler
     {
+        public ObjectCache Cache { get; set; }
+
         public Task HandleRequest(IOwinContext context)
         {
             return Task.Run(async () =>
@@ -33,38 +36,49 @@ namespace tts.web.Handlers
                 var bitRate = 128;
                 int.TryParse(context.Request.Query["bitrate"], out bitRate);
 
-                context.Response.ContentType = "audio/mpeg";
+                var cacheKey = string.Format("{0}-{1}-{2}-{3}", gender, age, bitRate, text);
 
-                using (var synth = new SpeechSynthesizer())
+                var data = Cache.Get(cacheKey) as byte[];
+
+                if (data == null)
                 {
-                    synth.SelectVoiceByHints(gender, age);
-
-                    using (var wavStream = new MemoryStream())
+                    using (var synth = new SpeechSynthesizer())
                     {
-                        synth.SetOutputToWaveStream(wavStream);
+                        synth.SelectVoiceByHints(gender, age);
 
-                        synth.Speak(text);
-
-                        await wavStream.FlushAsync();
-
-                        wavStream.Seek(0, SeekOrigin.Begin);
-
-                        using (var wavReader = new WaveFileReader(wavStream))
+                        using (var wavStream = new MemoryStream())
                         {
-                            using (var mp3Stream = new MemoryStream())
+                            synth.SetOutputToWaveStream(wavStream);
+
+                            synth.Speak(text);
+
+                            await wavStream.FlushAsync();
+
+                            wavStream.Seek(0, SeekOrigin.Begin);
+
+                            using (var wavReader = new WaveFileReader(wavStream))
                             {
-                                using (var mp3Writer = new LameMP3FileWriter(mp3Stream, wavReader.WaveFormat, bitRate))
+                                using (var mp3Stream = new MemoryStream())
                                 {
-                                    await wavReader.CopyToAsync(mp3Writer);
+                                    using (var mp3Writer = new LameMP3FileWriter(mp3Stream, wavReader.WaveFormat, bitRate))
+                                    {
+                                        await wavReader.CopyToAsync(mp3Writer);
+                                    }
+
+                                    await mp3Stream.FlushAsync();
+
+                                    data = mp3Stream.GetBuffer();
                                 }
-
-                                await mp3Stream.FlushAsync();
-
-                                await context.Response.WriteAsync(mp3Stream.GetBuffer());
                             }
                         }
                     }
+
+                    Cache.Add(cacheKey, data, new CacheItemPolicy { AbsoluteExpiration = DateTime.UtcNow.AddYears(1) });
                 }
+
+                context.Response.ContentType = "audio/mpeg";
+
+                await context.Response.WriteAsync(data);
             });
         }
     }

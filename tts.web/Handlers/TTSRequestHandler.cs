@@ -6,44 +6,61 @@ using System.Speech.Synthesis;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.Owin;
+using NAudio.Lame;
+using NAudio.Wave;
 
 namespace tts.web.Handlers
 {
     public class TTSRequestHandler
     {
-        public Task HandleRequest(IOwinContext context)
+        public async Task HandleRequest(IOwinContext context)
         {
-            return Task.Run(() =>
+            var text = context.Request.Query["text"];
+
+            if (text.Length > 140)
             {
-                var text = context.Request.Query["text"];
+                text = text.Substring(0, 140);
+            }
 
-                if (text.Length > 140)
+            var gender = VoiceGender.Female;
+            Enum.TryParse<VoiceGender>(context.Request.Query["gender"], true, out gender);
+
+            var age = VoiceAge.Adult;
+            Enum.TryParse<VoiceAge>(context.Request.Query["age"], true, out age);
+
+            var bitRate = 128;
+            int.TryParse(context.Request.Query["bitrate"], out bitRate);
+
+            context.Response.ContentType = "audio/mpeg";
+
+            using (var synth = new SpeechSynthesizer())
+            {
+                synth.SelectVoiceByHints(gender, age);
+
+                using (var wavStream = new MemoryStream())
                 {
-                    text = text.Substring(0, 140);
-                }
-                
-                var gender = VoiceGender.Female;                
-                Enum.TryParse<VoiceGender>(context.Request.Query["gender"], true, out gender);
+                    synth.SetOutputToWaveStream(wavStream);
 
-                var age = VoiceAge.Adult;
-                Enum.TryParse<VoiceAge>(context.Request.Query["age"], true, out age);
+                    synth.Speak(text);
 
-                context.Response.ContentType = "audio/wav";
+                    await wavStream.FlushAsync();
 
-                using(var synth = new SpeechSynthesizer())
-                {
-                    synth.SelectVoiceByHints(gender, age);
-
-                    using(var stream = new MemoryStream())
+                    using (var wavReader = new WaveFileReader(wavStream))
                     {
-                        synth.SetOutputToWaveStream(stream);
+                        using (var mp3Stream = new MemoryStream())
+                        {
+                            using (var mp3Writer = new LameMP3FileWriter(mp3Stream, wavReader.WaveFormat, bitRate))
+                            {
+                                await wavReader.CopyToAsync(mp3Writer);
+                            }
 
-                        synth.Speak(text);
+                            await mp3Stream.FlushAsync();
 
-                        context.Response.Write(stream.GetBuffer());                    
-                    }
+                            await context.Response.WriteAsync(mp3Stream.GetBuffer());
+                        }
+                    }                    
                 }
-            });            
+            }
         }
     }
 }

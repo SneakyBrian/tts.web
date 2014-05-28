@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Web;
+using Microsoft.WindowsAzure.ServiceRuntime;
 using Owin;
 using tts.web.Handlers;
 
@@ -15,7 +16,7 @@ namespace tts.web
         {
             CheckAddBinPath();
 
-            var reqHandler = new TTSRequestHandler() { Cache = new FileCache() };
+            var reqHandler = new TTSRequestHandler() { Cache = new FileCache(RoleEnvironment.GetLocalResource("fileCache").RootPath) };
 
             app.Run(reqHandler.HandleRequest);
         }
@@ -23,7 +24,7 @@ namespace tts.web
         public static void CheckAddBinPath()
         {
             // find path to 'bin' folder
-            var binPath = Path.Combine(new string[] { AppDomain.CurrentDomain.BaseDirectory, "bin" });
+            var binPath = Path.Combine(Environment.GetEnvironmentVariable("RoleRoot") + @"\", @"approot\bin");
             // get current search path from environment
             var path = Environment.GetEnvironmentVariable("PATH") ?? "";
 

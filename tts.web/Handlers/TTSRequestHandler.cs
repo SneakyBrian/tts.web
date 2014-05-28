@@ -20,7 +20,7 @@ namespace tts.web.Handlers
         {
             return Task.Run(async () =>
             {
-                var text = context.Request.Query["text"];
+                var text = context.Request.Query["text"] ?? "Please specify text parameter";
 
                 if (text.Length > 140)
                 {
@@ -73,7 +73,7 @@ namespace tts.web.Handlers
                         }
                     }
 
-                    Cache.Add(cacheKey, data, new CacheItemPolicy { AbsoluteExpiration = DateTime.UtcNow.AddYears(1) });
+                    Cache.Add(cacheKey, data, new CacheItemPolicy { AbsoluteExpiration = DateTime.UtcNow.AddMonths(1) });
                 }
 
                 context.Response.ContentType = "audio/mpeg";

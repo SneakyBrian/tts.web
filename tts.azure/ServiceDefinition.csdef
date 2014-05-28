@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="tts.azure" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2014-01.2.3">
-  <WebRole name="tts.web" vmsize="Small">
-    <Runtime executionContext="elevated"/>
+  <WebRole name="tts.web" vmsize="ExtraSmall">
+    <Runtime executionContext="elevated" />
     <Sites>
       <Site name="Web">
         <Bindings>

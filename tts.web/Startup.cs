@@ -14,7 +14,11 @@ namespace tts.web
     {
         public void Configuration(IAppBuilder app)
         {
-            var reqHandler = new TTSRequestHandler() { Cache = new FileCache(RoleEnvironment.GetLocalResource("fileCache").RootPath) };
+            var cache = RoleEnvironment.IsAvailable ? 
+                new FileCache(RoleEnvironment.GetLocalResource("fileCache").RootPath) : 
+                new FileCache(Path.GetTempPath());
+
+            var reqHandler = new TTSRequestHandler() { Cache = cache };
 
             app.Run(reqHandler.HandleRequest);
         }

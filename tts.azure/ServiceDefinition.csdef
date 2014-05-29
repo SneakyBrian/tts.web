@@ -19,7 +19,7 @@
       <Import moduleName="Diagnostics" />
     </Imports>
     <LocalResources>
-      <LocalStorage name="fileCache" cleanOnRoleRecycle="false" sizeInMB="2048" />
+      <LocalStorage name="fileCache" cleanOnRoleRecycle="false" />
     </LocalResources>
   </WebRole>
 </ServiceDefinition>
